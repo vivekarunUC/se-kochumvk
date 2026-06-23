@@ -26,7 +26,7 @@ io.on('connection', (socket) => {
   console.log('New client connected - socket ID: ' + socket.id )
 
   //Todo: UC-02 (AC-02.1): notify all connected clients that a new user joined
-
+  io.emit('status', username + ' joined the chat. Number of connected clients: ' + userlist.size);
   // ---------------------------------------------------------------------------
   // Use-Case-01: Send message
   //
@@ -38,6 +38,14 @@ io.on('connection', (socket) => {
   // AC-01.5: input is cleared after sending (enforced client-side)
   // ---------------------------------------------------------------------------
   //Todo: code to implement the above use case and AC items
+  socket.on('message', (data) => {
+    // AC-01.2: ignore empty messages
+    if (!data || data.trim() === '') return;
+    // AC-01.3 + AC-01.4 broadcast to all clients with sender username
+    const sender = userlist.get(socket.id);
+    console.log(`Debug> "${sender} sent: ${data}"`);
+    io.emit('message', sender + ' says: ' + data.trim());
+  });
 
   // ---------------------------------------------------------------------------
   // Use-Case-02: Receive message — disconnect notification
@@ -49,5 +57,6 @@ io.on('connection', (socket) => {
     userlist.delete(socket.id);
     console.log('Client disconnected - socket ID: ' + socket.id);
     //todo: code to broadcast the status
+    io.emit('status', username + ' left the chat. Number of connected clients: ' + userlist.size);
   });
 });

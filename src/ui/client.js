@@ -38,6 +38,7 @@ function sendMessage() {
     var message = chatMessageInput.value.trim();
     if (!message) return;   // AC-02.2: empty messages are ignored
     console.log(`Debug>Chat message: ${message}`); //for UI testing only
+    socket.emit('message', message);
     // other AC will be implemented
     chatMessageInput.value = ''; // AC-01.5: clear input after sending
     chatMessageInput.focus();
@@ -48,8 +49,23 @@ function sendMessage() {
 // =============================================================================
 
 //TODO: code to implement AC-02.1: display incoming chat messages without page refresh
+socket.on('message', displayMessage);
 
+function displayMessage(data) {
+    var d = document.createElement('div');
+    var timestamp = new Date().toLocaleTimeString();
+    d.innerHTML = '[' + timestamp + '] ' + data;
+    document.getElementById('responses').appendChild(d);
+    // AC-02.3 (UI): auto-scroll to the latest message
+    window.scrollTo(0, document.body.scrollHeight);
+}
+socket.on('status', displayStatus);
 
-//TODO: code to implement AC-02.1: display system status events (join/leave) in the status area
-// AC-02.2: shows timestamp for each message
-// AC-02.3 (UI): auto-scroll to the latest message
+function displayStatus(data) {
+        var statusElm = document.getElementById('status');
+    // AC-02.2: shows timestamp for each message
+    var timestamp = new Date().toLocaleTimeString();
+    statusElm.innerHTML = statusElm.innerHTML + '<br>[' + timestamp + '] ' + data;
+    // AC-02.3 (UI): auto-scroll to the latest message
+    statusElm.scrollTop = statusElm.scrollHeight;
+}
