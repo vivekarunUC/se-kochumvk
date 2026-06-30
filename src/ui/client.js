@@ -54,7 +54,7 @@ socket.on('message', displayMessage);
 function displayMessage(data) {
     var d = document.createElement('div');
     var timestamp = new Date().toLocaleTimeString();
-    d.innerHTML = '<span style="color: #2431e5">[' + timestamp + ']</span> ' + DOMPurify.sanatize(data);
+    d.innerHTML = '<span style="color: #2431e5">[' + timestamp + ']</span> ' + DOMPurify.sanitize(data);
     document.getElementById('responses').appendChild(d);
     // AC-02.3 (UI): auto-scroll to the latest message
     window.scrollTo(0, document.body.scrollHeight);
@@ -65,7 +65,7 @@ function displayStatus(data) {
         var statusElm = document.getElementById('status');
     // AC-02.2: shows timestamp for each message
     var timestamp = new Date().toLocaleTimeString();
-    statusElm.innerHTML = statusElm.innerHTML + '<br><span style="color: #2ee524">[' + timestamp + ']</span> '  + DOMPurify.sanatize(data);
+    statusElm.innerHTML = statusElm.innerHTML + '<br><span style="color: #2ee524">[' + timestamp + ']</span> '  + DOMPurify.sanitize(data);
     // AC-02.3 (UI): auto-scroll to the latest message
     statusElm.scrollTop = statusElm.scrollHeight;
 }
