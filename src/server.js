@@ -69,4 +69,10 @@ io.on('connection', (socket) => {
     //todo: code to broadcast the status
     io.emit('status', username + ' left the chat. Number of connected clients: ' + userlist.size);
   });
+
+  socket.on('typing', () => {
+    const username = userlist.get(socket.id);
+    console.log(`${username} is typing`);
+    socket.broadcast.emit('typing', `${username} is typing...`);
+  });
 });

@@ -27,7 +27,8 @@ if(!chatMessageInput) {
 }
 // AC-01.2 (UI): pressing Enter also triggers sendMessage()
 chatMessageInput.addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') sendMessage();
+    socket.emit('typing');
+    if (e.key === 'Enter') sendMessage();
 });
 
 // =============================================================================
@@ -42,6 +43,10 @@ function sendMessage() {
     // other AC will be implemented
     chatMessageInput.value = ''; // AC-01.5: clear input after sending
     chatMessageInput.focus();
+
+    // Hide indicator locally when sending
+    var typingIndicator = document.querySelector(".ticontainer");
+    if (typingIndicator) typingIndicator.style.display = 'none';
 }
 
 // =============================================================================
@@ -58,6 +63,12 @@ function displayMessage(data) {
     document.getElementById('responses').appendChild(d);
     // AC-02.3 (UI): auto-scroll to the latest message
     window.scrollTo(0, document.body.scrollHeight);
+
+    // Hide indicator when a message is received
+    var typingIndicator = document.querySelector(".ticontainer");
+    var typingText = document.getElementById('typing');
+    if (typingIndicator) typingIndicator.style.display = 'none';
+    if (typingText) typingText.innerText = '';
 }
 socket.on('status', displayStatus);
 
@@ -69,3 +80,31 @@ function displayStatus(data) {
     // AC-02.3 (UI): auto-scroll to the latest message
     statusElm.scrollTop = statusElm.scrollHeight;
 }
+document.getElementById('joinBtn').addEventListener('click', joinChat);
+function joinChat() {
+    const username = document.getElementById('username').value;
+    const pattern = /^\w{3,20}$/;
+    if (!username || !pattern.test(username)) {
+    alert("Username cannot be empty and must be between 3–20 characters!");
+    return;
+    }
+    //the following lines should be moved to the authentication confirmation from the server
+    document.getElementById('loginUI').style.display = 'none';
+    document.getElementById('chatUI').style.display = '';
+}
+socket.on('typing', function(data){
+  console.log('typing event:' + data);
+  var typingText = document.getElementById('typing');
+  var typingIndicator = document.querySelector(".ticontainer");
+  if (typingIndicator) {
+    typingIndicator.style.display = 'block';
+    if (typingText) typingText.innerText = data || "Someone is typing...";
+
+    // Clear existing timeout and hide indicator after 3 seconds of inactivity
+    clearTimeout(typingIndicator.timer);
+    typingIndicator.timer = setTimeout(function() {
+      typingIndicator.style.display = 'none';
+      if (typingText) typingText.innerText = '';
+    }, 3000);
+  }
+});
