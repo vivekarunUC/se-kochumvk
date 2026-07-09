@@ -1,0 +1,29 @@
+{
+  "name": "lab1",
+  "version": "1.0.0",
+  "description": "Messenger - Lab1",
+  "keywords": [
+    "Node.js",
+    "Express",
+    "socket.io"
+  ],
+  "homepage": "https://github.com/vivekarunUC/se-kochumvk#readme",
+  "bugs": {
+    "url": "https://github.com/vivekarunUC/se-kochumvk/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vivekarunUC/se-kochumvk.git"
+  },
+  "license": "ISC",
+  "author": "Vivek Arun",
+  "type": "commonjs",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "socket.io": "^4.8.3"
+  }
+}
