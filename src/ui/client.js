@@ -38,7 +38,7 @@ if (chatMessageInput) {
 // =============================================================================
 
 function sendMessage() {
-    var message = chatMessageInput.value.trim();
+    const message = chatMessageInput.value.trim();
     if (!message) return;   // AC-02.2: empty messages are ignored
     console.log(`Debug>Chat message: ${message}`); //for UI testing only
     socket.emit('message', message);
