@@ -89,19 +89,75 @@ function displayStatus(data) {
 const joinBtn = document.getElementById('joinBtn');
 if (joinBtn) joinBtn.addEventListener('click', joinChat);
 
+const passwordInput = document.getElementById('password');
+if (passwordInput) {
+    passwordInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') joinChat();
+    });
+}
+
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+        window.location.reload(); // Simplest way to logout and reset socket state
+    });
+}
+
 function joinChat() {
     const usernameElm = document.getElementById('username');
     const username = usernameElm ? usernameElm.value : '';
     const pattern = /^\w{3,20}$/;
     if (!username || !pattern.test(username)) {
-        alert("Username cannot be empty and must be between 3–20 characters!");
+        document.getElementById('login-error').textContent = "Username cannot be empty and must be between 3–20 characters!";
         return;
     }
+
+    const passwordElm = document.getElementById('password');
+    const password = passwordElm ? passwordElm.value : '';
+    const passwordpattern = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
+
+    if (!password || !passwordpattern.test(password)) {
+        document.getElementById('login-error').textContent = "Password must be at least 6 characters long and contain both letters and numbers.";
+        return;
+    }
+    document.getElementById('login-error').textContent = "";
+
+    // AC-03.1: send credentials (as JSON object) to server (UC-03)
+    const logincredentials = { username: username, password: password };
+    socket.emit('join', logincredentials);
+    console.log("Debug>sent login credentials to server: " + JSON.stringify(logincredentials));
+}
+
+socket.on('join-success', function(username) {
     const loginUI = document.getElementById('loginUI');
     const chatUI = document.getElementById('chatUI');
+    const displayName = document.getElementById('display-name');
+
     if (loginUI) loginUI.style.display = 'none';
-    if (chatUI) chatUI.style.display = '';
-}
+    if (chatUI) chatUI.style.display = 'block';
+    if (displayName) displayName.textContent = username;
+});
+
+socket.on('join-error', function(message) {
+    const errorElm = document.getElementById('login-error');
+    if (errorElm) errorElm.textContent = message;
+});
+
+socket.on('not-authorized', function() {
+    console.log("Debug>this client has not been authenticated!");
+    const loginUI = document.getElementById('loginUI');
+    const chatUI = document.getElementById('chatUI');
+    if (loginUI) loginUI.style.display = 'block';
+    if (chatUI) chatUI.style.display = 'none';
+    const errorElm = document.getElementById('login-error');
+    if (errorElm) errorElm.textContent = "Session invalid. Please log in.";
+});
+
+socket.on('user-list', (users) => {
+    console.log("Debug>got user-list= " + JSON.stringify(users));
+    const userListElm = document.getElementById('user-list');
+    if (userListElm) userListElm.textContent = JSON.stringify(users);
+});
 
 let typingTimer;
 socket.on('typing', function(data){
