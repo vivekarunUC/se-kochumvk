@@ -3,24 +3,60 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Simple Messenger — EECE/CS 3093C Lab 1</title>
+  <title>Messenger with basic authentication — EECE/CS 3093C Lab 2</title>
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.4.11/purify.min.js" integrity="sha512-vBe+8DnrK9HGgW5O2AOqY/sJxCkEXEilaOolPs6lx/dxgn9K7dJIsHCOYAJL9ZaqImJbeV9MQsLLaSToUWSCXQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
 <h1>Simple Messenger — EECE/CS 3093C Lab 1</h1>
 <h3>By Vivek Arun</h3>
 <br>
-Chat message:  
-<input id="chat-message" type="text" autocomplete="off" placeholder="Type a message…" style="width:450px;" />  
-<button id="send-button">Send</button>
+<div id="loginUI">
+<label for="username">Username: </label>
+<input type="text" id="username" placeholder="Username"
+pattern="\w{3,20}" required
+title="Username must be between 3-20 characters"/>
 <br>
-<!--new UI elements to be implemented-->
-<b>System status: </b><br>
-<div id="status" style="width:625px; height:75px; overflow-y:scroll;"></div>
-<b>Chat Responses:</b><br>
-<div id="responses"></div>
+<label for="password">Password: </label>
+<input type="password" id="password" placeholder="Type your password here"
+pattern="^(?=.*[A-Za-z])(?=.*\d).{6,}$"
+title="Password must be at least 6 characters long and contain both letters and numbers." />
+<button class="button round" id="joinBtn">Join Chat</button>
+<div id="login-error" style="color: red;"></div>
+</div>
+<br>
+<div id="chatUI" style="display:none">
+  <span>Logged in as: &nbsp;<strong id="display-name"></strong></span>
+    &nbsp; &nbsp;
+  <button id="logoutBtn">Logout</button>
+  <!--existing UI elements from Lecture 11 and previous lectures-->
+  <br>
+  Chat message:  
+  <input id="chat-message" type="text" autocomplete="off" placeholder="Type a message…" style="width:450px;" />  
+  <button id="send-button" class="button round">Send</button>
+  <div id="typing"></div>
+    <div class="ticontainer" style="display:none">
+    <div class="tiblock">
+      <div class="tidot"></div>
+      <div class="tidot"></div>
+      <div class="tidot"></div>
+    </div>
+</div>
+  <br>
+  <!--new UI elements to be implemented-->
+  <b>Online Users: </b>
+  <div id="user-list" class="badge bg-info text-dark mb-2"></div><br>
+  <b>System status: </b><br>
+  <div id="status" style="width:625px; height:75px; overflow-y:scroll;"></div>
+  <b>Chat Responses:</b><br>
+  <div id="responses"></div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 <script src="client.js"></script>
 </body>
 </html>

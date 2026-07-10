@@ -13,10 +13,10 @@ const io     = new Server(server);
 app.use((req, res, next) => {
   res.setHeader(
   'Content-Security-Policy',
-  "default-src 'self'; \
-  script-src 'self' https://cdnjs.cloudflare.com; \
-  style-src 'self' 'unsafe-inline'; \
-  connect-src 'self' https://cdnjs.cloudflare.com"
+  "default-src 'self'; " +
+  "script-src 'self' https://cdnjs.cloudflare.com https://code.jquery.com https://cdn.jsdelivr.net; " +
+  "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
+  "connect-src 'self' ws: wss: https://cdnjs.cloudflare.com"
   );
   next();
 });
@@ -27,16 +27,71 @@ server.listen(PORT, () => console.log('Server running on port ' + PORT));
 
 // In-memory store: socketId → username
 const userlist = new Map();
+// =============================================================
+// Use-Case-03: Join Chat — credential store (internal to Use-Case-03, not part of Use-Case-04)
+// Temporary: hard-coded JSON array — Lab 2 only
+// TODO (Sprint 2): replace with MongoDB Atlas + bcrypt hashing
+// =============================================================
+const users = [
+  { username: 'abc',   password: 'Pass1234' },
+  { username: 'xyz',     password: 'Pass5678' },
+  { username: 'test', password: 'Pass9012' }
+];  
 
+// =============================================================
+// Use-Case-04: Authorize User
+// returns true if this connection was authenticated by Use-Case-03
+// =============================================================
+function authorizeUser(socket) {
+  if (!socket || !socket.authenticated) 
+    console.log('Connection has not been authenticated');
+  return socket.authenticated === true;  
+}
+// =============================================================
+// Helper: send an event only to authenticated connections
+// Used by Use-Case-01 (Send Message) and Use-Case-03 (Join Chat)
+// =============================================================
+function sendToAuthenticatedClients(event, data) {
+  userlist.forEach((_, sid) => {
+    const s = io.sockets.sockets.get(sid);
+    if (s && authorizeUser(s)) s.emit(event, data);
+  });
+}
 io.on('connection', (socket) => {
 
   // Auto-assign a unique username from the socket ID
-  const username = 'User_' + socket.id.slice(-5);
-  userlist.set(socket.id, username);
+  //const username = 'User_' + socket.id.slice(-5);
+  //userlist.set(socket.id, username);
+  //console.log('New client connected - socket ID: ' + socket.id )
+  socket.authenticated = false;
   console.log('New client connected - socket ID: ' + socket.id )
 
-  //Todo: UC-02 (AC-02.1): notify all connected clients that a new user joined
-  io.emit('status', username + ' joined the chat. Number of connected clients: ' + userlist.size);
+  // Handle Join Chat (Use-Case-03)
+  socket.on('join', (credentials) => {
+    const { username, password } = credentials;
+    
+    // Find user in the hard-coded store
+    const user = users.find(u => u.username === username && u.password === password);
+
+    if (user) {
+      // Success logic
+      socket.authenticated = true;
+      userlist.set(socket.id, username);
+      
+      socket.emit('join-success', username);
+      
+      // Notify others and update user lists
+      io.emit('status', username + ' joined the chat. Total users: ' + userlist.size);
+      io.emit('user-list', Array.from(userlist.values()));
+      
+      console.log(`Debug> User "${username}" authenticated successfully.`);
+    } else {
+      // Failure logic
+      socket.emit('join-error', 'Invalid username or password.');
+      console.log(`Debug> Authentication failed for user: ${username}`);
+    }
+  });
+
   // ---------------------------------------------------------------------------
   // Use-Case-01: Send message
   //
@@ -49,12 +104,20 @@ io.on('connection', (socket) => {
   // ---------------------------------------------------------------------------
   //Todo: code to implement the above use case and AC items
   socket.on('message', (data) => {
+    console.log(`Debug> received a chat message: ${data}`); //new debug for Lab 2 security check
+    // AC-04: Authorize User before broadcasting
+    if (!authorizeUser(socket)) {
+      socket.emit('not-authorized');
+      return;
+    }
+
     // AC-01.2: ignore empty messages
     if (!data || data.trim() === '') return;
-    // AC-01.3 + AC-01.4 broadcast to all clients with sender username
+    // AC-01.3 + AC-01.4: revised: broadcast to all authenticated clients with sender username
     const sender = userlist.get(socket.id);
-    console.log(`Debug> "${sender} sent: ${data}"`);
-    io.emit('message', sender + ' says: ' + data.trim());
+    console.log(`Debug> "${sender}" sent: ${data}`);
+    //io.emit('message', sender + ' says: ' + data.trim()); //old code in Lab 1 sent to all connected clients
+    sendToAuthenticatedClients('message', sender + ' says: ' + data.trim()); // new code for Lab 2
   });
 
   // ---------------------------------------------------------------------------
@@ -68,5 +131,11 @@ io.on('connection', (socket) => {
     console.log('Client disconnected - socket ID: ' + socket.id);
     //todo: code to broadcast the status
     io.emit('status', username + ' left the chat. Number of connected clients: ' + userlist.size);
+  });
+
+  socket.on('typing', () => {
+    const username = userlist.get(socket.id);
+    console.log(`${username} is typing`);
+    socket.broadcast.emit('typing', `${username} is typing...`);
   });
 });
