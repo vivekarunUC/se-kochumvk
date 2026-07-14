@@ -10,6 +10,7 @@ const path       = require('path');
 const app    = express();
 const server = http.createServer(app);
 const io     = new Server(server);
+const messengerdb = require('./messengerdb');
 app.use((req, res, next) => {
   res.setHeader(
   'Content-Security-Policy',
@@ -23,7 +24,16 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, 'ui')));
 
 const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => console.log('Server running on port ' + PORT));
+(async () => {
+try {
+await messengerdb.connect();
+server.listen(PORT, () =>
+console.log('Server running on port ' + PORT));
+} catch (err) {
+console.log('Error>server.js: failed to start — database connection error', err);
+process.exit(1); // fail fast — don't run a server that can't authenticate anyone
+}
+})();
 
 // In-memory store: socketId → username
 const userlist = new Map();
@@ -32,12 +42,12 @@ const userlist = new Map();
 // Temporary: hard-coded JSON array — Lab 2 only
 // TODO (Sprint 2): replace with MongoDB Atlas + bcrypt hashing
 // =============================================================
-const users = [
+/* const users = [
   { username: 'abc',   password: 'Pass1234' },
   { username: 'xyz',     password: 'Pass5678' },
   { username: 'test', password: 'Pass9012' }
 ];  
-
+*/
 // =============================================================
 // Use-Case-04: Authorize User
 // returns true if this connection was authenticated by Use-Case-03
@@ -67,11 +77,11 @@ io.on('connection', (socket) => {
   console.log('New client connected - socket ID: ' + socket.id )
 
   // Handle Join Chat (Use-Case-03)
-  socket.on('join', (credentials) => {
+  socket.on('join', async (credentials) => {
     const { username, password } = credentials;
     
     // Find user in the hard-coded store
-    const user = users.find(u => u.username === username && u.password === password);
+    const user = await messengerdb.find(username,password);
 
     if (user) {
       // Success logic
