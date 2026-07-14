@@ -102,6 +102,58 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle Register (Use-Case-05)
+  socket.on('register', async function({ username, password }) {
+    if (!username || typeof username !== 'string' ||
+        !password || typeof password !== 'string' ||
+        username.trim().length === 0 || password.length === 0) { // AC-05.3
+      socket.emit('register-error', 'Invalid request.'); // AC-05.8
+      return;
+    }
+    username = username.trim();
+    // AC-05.3: server independently re-validates format — client can be bypassed
+    const usernamePattern = /^\w{3,20}$/;
+    const passwordPattern = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
+    if (!usernamePattern.test(username)) {
+      socket.emit('register-error', 'Username must be 3-20 characters (letters, numbers, underscore).');
+      return; // AC-05.8
+    }
+    if (!passwordPattern.test(password)) {
+      socket.emit('register-error', 'Password must be at least 6 characters with letters and numbers.');
+      return; // AC-05.8
+    }
+
+    // Part I code
+    let result;
+    try {
+      result = await messengerdb.register(username, password);
+    } catch (err) {
+      socket.emit('register-error', 'Server error. Please try again.'); // AC-05.8
+      return;
+    }
+    if (!result.success) {
+      socket.emit('register-error', result.message); // AC-05.8
+      return;
+    }
+    socket.emit('register-success', username); // AC-05.7: send the 'register-success' event to the client
+  });
+
+  // Handle Leave Chat
+  socket.on('leave', () => {
+    const username = userlist.get(socket.id);
+    if (username) {
+      userlist.delete(socket.id);
+      socket.authenticated = false;
+      console.log(`Debug> User "${username}" left the chat.`);
+
+      // Notify others and update user lists
+      io.emit('status', username + ' left the chat. Total users: ' + userlist.size);
+      io.emit('user-list', Array.from(userlist.values()));
+
+      socket.emit('leave-success');
+    }
+  });
+
   // ---------------------------------------------------------------------------
   // Use-Case-01: Send message
   //
@@ -137,10 +189,13 @@ io.on('connection', (socket) => {
   // ---------------------------------------------------------------------------
   socket.on('disconnect', () => {
     const username = userlist.get(socket.id);
-    userlist.delete(socket.id);
-    console.log('Client disconnected - socket ID: ' + socket.id);
-    //todo: code to broadcast the status
-    io.emit('status', username + ' left the chat. Number of connected clients: ' + userlist.size);
+    if (username) {
+      userlist.delete(socket.id);
+      console.log('Client disconnected - socket ID: ' + socket.id);
+      // Notify others and update user lists
+      io.emit('status', username + ' left the chat. Total users: ' + userlist.size);
+      io.emit('user-list', Array.from(userlist.values()));
+    }
   });
 
   socket.on('typing', () => {
@@ -148,4 +203,5 @@ io.on('connection', (socket) => {
     console.log(`${username} is typing`);
     socket.broadcast.emit('typing', `${username} is typing...`);
   });
+  
 });

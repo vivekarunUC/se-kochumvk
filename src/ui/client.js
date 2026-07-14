@@ -89,6 +89,23 @@ function displayStatus(data) {
 const joinBtn = document.getElementById('joinBtn');
 if (joinBtn) joinBtn.addEventListener('click', joinChat);
 
+const registerBtn = document.getElementById('registerBtn');
+if (registerBtn) registerBtn.addEventListener('click', registerAccount);
+
+// Toggle: Login -> Register
+document.getElementById('showRegisterBtn').addEventListener('click', function() {
+    document.getElementById('loginUI').style.display = 'none';
+    document.getElementById('registerUI').style.display = 'block';
+    document.getElementById('login-error').textContent = '';
+});
+
+// Toggle: Register -> Login
+document.getElementById('showLoginBtn').addEventListener('click', () => {
+    document.getElementById('registerUI').style.display = 'none';
+    document.getElementById('loginUI').style.display = 'block';
+    document.getElementById('register-error').textContent = '';
+});
+
 const passwordInput = document.getElementById('password');
 if (passwordInput) {
     passwordInput.addEventListener('keypress', function(e) {
@@ -96,10 +113,17 @@ if (passwordInput) {
     });
 }
 
+const regPasswordInput = document.getElementById('reg-password');
+if (regPasswordInput) {
+    regPasswordInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') registerAccount();
+    });
+}
+
 const logoutBtn = document.getElementById('logoutBtn');
 if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
-        window.location.reload(); // Simplest way to logout and reset socket state
+        leaveChat();
     });
 }
 
@@ -127,6 +151,64 @@ function joinChat() {
     socket.emit('join', logincredentials);
     console.log("Debug>sent login credentials to server: " + JSON.stringify(logincredentials));
 }
+
+// Use-Case-05: Register Account
+function registerAccount() {
+    console.log("Debug> Register button clicked");
+    // AC-05.2: client-side format validation before submission
+    const username = document.getElementById('reg-username').value;
+    const pattern = /^\w{3,20}$/;
+    if (!username || !pattern.test(username)) {
+        document.getElementById('register-error').textContent =
+            "Username cannot be empty and must be between 3-20 characters!";
+        return;
+    }
+    const password = document.getElementById('reg-password').value;
+    const passwordpattern = /^(?=.*[A-Za-z])(?=.*\d).{6,}$/;
+    if (!password || !passwordpattern.test(password)) {
+        document.getElementById('register-error').textContent =
+            "Password must be at least 6 characters long and contain both letters and numbers.";
+        return;
+    }
+    document.getElementById('register-error').textContent = '';
+    console.log("Debug> Emitting register event for: " + username);
+    socket.emit('register', { username: username, password: password });
+}
+
+function leaveChat() {
+    console.log("Debug> Leave button clicked");
+    socket.emit('leave');
+}
+
+// Handle leave success to transition UI back to login
+socket.on('leave-success', () => {
+    const loginUI = document.getElementById('loginUI');
+    const chatUI = document.getElementById('chatUI');
+    if (loginUI) loginUI.style.display = 'block';
+    if (chatUI) chatUI.style.display = 'none';
+    
+    // Clear errors and reset inputs
+    document.getElementById('login-error').textContent = "You have left the chat.";
+    const chatMessageInput = document.getElementById('chat-message');
+    if (chatMessageInput) chatMessageInput.value = '';
+    
+    const responsesElm = document.getElementById('responses');
+    if (responsesElm) responsesElm.innerHTML = ''; // Clear chat history locally
+});
+
+// AC-05.7: clear confirmation on success, shown on the now-visible login screen
+socket.on('register-success', function(username) {
+    document.getElementById('registerUI').style.display = 'none';
+    document.getElementById('loginUI').style.display = 'block';
+    document.getElementById('register-error').textContent = '';
+    document.getElementById('login-error').textContent =
+        `Account '${username}' created! You can now log in.`;
+});
+
+// AC-05.8: specific, actionable error message on failure
+socket.on('register-error', function(message) {
+    document.getElementById('register-error').textContent = message;
+});
 
 socket.on('join-success', function(username) {
     const loginUI = document.getElementById('loginUI');
